@@ -1,0 +1,21 @@
+OH NO!!!!
+I am so frustrated right now. I was in the middle of refactoring my
+game code to make it a bit cleaner and a bit easier to read, and 
+somehow I have managed to earase MOST of my game loop!  Yes, I tried
+the undo command.  It didn't work.
+
+I can't be bothered to fix it at this point. So I am tasking you with
+finishing the game.
+
+1) Go through the game loop and fix all of the missing update loops.
+2) Go through the game loop and fix all of the missing draw loops.
+3) Add music to the game.  
+4) Add a sound effect to the game when the player fires a bullet.
+5) The font is fine.... but I bet it would be a lot cooler if you 
+added in a new external font.
+6) Currently the game is fine... but I think it would be really cool
+if after you shot an asteroid, it broke apart into 2 smaller asteroids
+that travels slightly different directions.
+7)Those smaller asteroids should only be worth 5 points.  Adjust the way
+scoring is done to accompdate this.  There are several ways to make this 
+happen.
