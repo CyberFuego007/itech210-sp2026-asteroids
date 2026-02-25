@@ -15,20 +15,24 @@ BLUE = (31, 81, 255)
 WHITE =(255,255,255)
 
 #fonts
-score_font = pygame.font.SysFont("arial", 30)
-go_font = pygame.font.SysFont("arial", 60)
+score_font = pygame.font.SysFont("font/Orbitron-Regular.ttf", 30)
+go_font = pygame.font.SysFont("font/Orbitron-Regular.ttf", 60)
 
 #load images
 space_ship = pygame.image.load("images/playerShip1_orange.png").convert_alpha()
 space_ship = pygame.transform.rotate(space_ship, -90)
 space_bg = pygame.image.load("images/bg.jpg")
 asteroid_1 = pygame.image.load("images/meteorBrown_big1.png")
+asteroid_2 = pygame.image.load('images/meteorBrown_med1.png')
 
+#load music
+pygame.mixer.music.load('sound/through_space.ogg')
+pygame.mixer.music.play(-1)
+pygame.mixer.music.set_volume(0.08)
 
-
-#fonts
-score_font = pygame.font.SysFont('arial',30)
-go_font = pygame.font.SysFont("arial", 60)
+#sound effect
+shoot=pygame.mixer.Sound('sound/SoundLaser.wav')
+shoot.set_volume(0.06)
 
 #background
 bg = pygame.transform.scale(space_bg, (WIDTH, HEIGHT))
@@ -44,6 +48,9 @@ player = {
     'invincible_timer': 2000,
     'last_hit': 0
 }
+
+#player_speed
+player_speed=player['speed']
 
 #bullets
 bullets = []
@@ -88,6 +95,11 @@ def check_offscreen(item):
         return True
     return False
 
+def check_offscreen_buffer(item, buffer=150):
+    x,y = item['pos']
+    return (x < -buffer or x > WIDTH + buffer or 
+            y < -buffer or y > HEIGHT + buffer)
+
 def update_asteroid_position(dt, asteroid):
     rad = math.radians(asteroid['angle'])
     dx = math.cos(rad) * asteroid['speed'] * dt
@@ -128,9 +140,9 @@ while running:
     player_input = pygame.key.get_pressed() 
     
     #update player position
-    if player_input[pygame.K_LEFT ]:
+    if player_input[pygame.K_LEFT]:
         player['angle'] -= player_speed * dt
-    if player_input[pygame.K_RIGHT ]:
+    if player_input[pygame.K_RIGHT]:
         player['angle'] += player_speed * dt
     
     #spawn bullets
@@ -141,12 +153,28 @@ while running:
             'speed': bullet_speed,
             'radius': 4
         })
+        shoot.play()
         bullet_last_fire = tick
 
     #update bullet position
-    
+    for bullet in bullets:
+        rad = math.radians(bullet['angle'])
+        dx = math.cos(rad) * bullet['speed'] * dt
+        dy = math.sin(rad) * bullet['speed'] * dt
+        bullet['pos'][0] += dx
+        bullet['pos'][1] += dy
+
     #check for bullets off screen
-        
+    i = 0
+    while i < len(bullets):
+        if bullets[i]['pos'][0] < 0 or bullets[i]['pos'][0] > WIDTH:
+            bullets.pop(i)
+        elif bullets[i]['pos'][1] < 0 or bullets[i]['pos'][1] > HEIGHT:
+            bullets.pop(i)
+        else:
+            i += 1
+
+
     #spawn asteroids
     if tick > asteroid_last_spawn + asteroid_spawn_rate:
         pos = random.choice(asteroid_spawn_locations).copy()
@@ -154,16 +182,33 @@ while running:
         target_y = player['pos'][1] + (random.random()*(HEIGHT//2))-(HEIGHT//4)
         asteroids.append({
             'pos': pos,
-            'angle': math.degrees(math.atan2(player['pos'][1]-pos[1], target_x-pos[0])), 
+            'angle': math.degrees(math.atan2(target_y - pos[1]-pos[1], target_x-pos[0])), 
             'speed': 4,
-            'radius': 45
+            'radius': 45,
+            'size': 1
         })
         asteroid_last_spawn = tick
 
     #update asteroid position
+    for asteroid in asteroids:
+        rad = math.radians(asteroid['angle'])
+        dx = math.cos(rad) * asteroid['speed'] * dt
+        dy = math.sin(rad) * asteroid['speed'] * dt
+        asteroid['pos'][0] += dx
+        asteroid['pos'][1] += dy
+
 
     #check for asteroids off screen
-    
+    i = 0
+    while i < len(asteroids):
+        x,y = asteroids[i]['pos']
+
+        if x < -250 or x > WIDTH + 250 or y < -250 or y > HEIGHT + 250:
+            asteroids.pop(i)
+        else:
+            i += 1
+
+
     #check for collisions with asteroids
     for asteroid in asteroids:
         if math.dist(asteroid['pos'], player['pos']) < asteroid['radius'] + player['radius']:
@@ -171,17 +216,26 @@ while running:
             if tick > player['last_hit'] + player['invincible_timer']:
                 player['lives'] -= 1
                 player['last_hit'] = tick
-
                 if player['lives'] <= 0:
                     game_over = True
-        
+                    
+      
         for bullet in bullets:
             if math.dist(asteroid['pos'], bullet['pos']) < asteroid['radius'] + bullet['radius']:
                 asteroids.remove(asteroid)
                 bullets.remove(bullet)
-                score += 10
-
-    
+                score += 10 if asteroid['size'] == 1 else 5
+            
+                if asteroid['size'] == 1:
+                    for i in range(2):
+                        asteroids.append({
+                            'pos': asteroid['pos'].copy(),
+                            'angle': asteroid['angle'] + random.randint(-40, 40),
+                            'speed': 6,
+                            'radius': 25,
+                            'size': 2
+                        })
+             
     
     #========== 
     #  DRAW
@@ -190,10 +244,20 @@ while running:
     screen.blit(bg, (0,0))
 
     #draw bullets
+    for bullet in bullets:
+        pygame.draw.circle(screen, BLUE, bullet['pos'], bullet['radius'])
 
     #draw asteroids
-    
+    for asteroid in asteroids:
+        if asteroid['size'] == 1:
+            sprite = asteroid_1
+        else:
+            sprite = asteroid_2
 
+        asteroid_sprite = pygame.transform.rotate(sprite, asteroid['angle'])
+        asteroid_rect = asteroid_sprite.get_rect(center=asteroid['pos'])
+        screen.blit(asteroid_sprite, asteroid_rect)
+        
     #draw player
     #if the player is in invincible state flicker the sprit
     #else draw normally
